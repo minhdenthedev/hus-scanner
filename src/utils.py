@@ -4,11 +4,14 @@ import matplotlib.pyplot as plt
 
 
 def detect_corner(img: np.ndarray):
+    # # Bước 2: Chuyển sang grayscale
+    # gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
     # Bước 3: Áp dụng Canny edge detection
     edges = cv.Canny(img, threshold1=50, threshold2=150)
 
     # Bước 4: Giãn các cạnh
-    kernel = np.ones((3, 3), np.uint8)
+    kernel = np.ones((5, 5), np.uint8)
     dilated = cv.dilate(edges, kernel, iterations=1)
 
     # Bước 5: Tìm các contour và lọc theo kích thước
