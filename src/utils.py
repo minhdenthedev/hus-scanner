@@ -1,6 +1,9 @@
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
+import os
+from PIL import Image
+import pillow_heif
 
 
 def detect_corner(img: np.ndarray):
@@ -30,3 +33,23 @@ def detect_corner(img: np.ndarray):
     else:
         print(approx)
 
+
+def convert_to_png(input_folder, output_folder):
+    # Register HEIC
+    pillow_heif.register_heif_opener()
+
+    os.makedirs(output_folder, exist_ok=True)
+
+    for filename in os.listdir(input_folder):
+        # If image is in HEIC format
+        if filename.lower().endswith(".HEIC"):
+            input_path = os.path.join(input_folder, filename)
+            output_path = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.png")
+
+            try:
+                image = Image.open(input_path)
+
+                image.save(output_path, format="PNG")
+                print(f"Converted {filename} to {output_path}")
+            except Exception as e:
+                print(f"Failed to convert {filename}: {e}")
