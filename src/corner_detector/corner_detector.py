@@ -12,31 +12,34 @@ class CornerDetector(BaseStep):
         super().__init__()
 
     def execute_step(self, img: np.ndarray):
-        # Your existing logic to detect corners
         img, approx = self.detect_corner(img)
+        if approx is None:
+            print("Error: No valid corners found.")
         return img, approx
 
     def detect_corner(self, img: np.ndarray):
-        # Bước 3: Áp dụng Canny edge detection
+        # Step 3: Apply Canny edge detection
         edges = cv.Canny(img, threshold1=50, threshold2=150)
 
-        # Bước 4: Giãn các cạnh
-        kernel = np.ones((5, 5), np.uint8)
+        # Step 4: Dilate the edges
+        kernel = np.ones((9, 9), np.uint8)
         dilated = cv.dilate(edges, kernel, iterations=1)
 
-        # Bước 5: Tìm các contour và lọc theo kích thước
+        # Step 5: Find contours and filter by size
         contours, _ = cv.findContours(dilated, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        contours = [cnt for cnt in contours if cv.contourArea(cnt) > 1000]  # Giữ lại các contour lớn
+        contours = [cnt for cnt in contours if cv.contourArea(cnt) > 1000]  # Keep large contours
 
-        # Bước 6: Tìm contour lớn nhất (giả định là tờ giấy A4)
-        largest_contour = max(contours, key=cv.contourArea)
+        # Step 6: Find the largest contour (assuming it's the paper)
+        if contours:
+            largest_contour = max(contours, key=cv.contourArea)
 
-        # Bước 7: Xấp xỉ contour để lấy đa giác có 4 cạnh
-        epsilon = 0.02 * cv.arcLength(largest_contour, True)
-        approx = cv.approxPolyDP(largest_contour, epsilon, True)
+            # Step 7: Approximate the contour to get a polygon with 4 edges
+            epsilon = 0.02 * cv.arcLength(largest_contour, True)
+            approx = cv.approxPolyDP(largest_contour, epsilon, True)
 
-        if len(approx) == 4:
-            return img, approx
-        else:
-            print("wrong number of approx >4 corners")
-            return img, None
+            # Return corners if it's a 4-sided polygon
+            if len(approx) == 4:
+                return img, approx
+
+        print("wrong number of approx >4 corners")
+        return img, None  # Return img and None if no valid corners are found
