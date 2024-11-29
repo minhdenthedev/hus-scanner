@@ -9,9 +9,9 @@ from src.utils import detect_corner
 import os
 from tqdm import tqdm
 
-
-images_path = 'E:\\hus-scanner\\test_images\\Processed_JPG'
+images_path = 'E:\\hus-scanner\\test_images\\raw_png_imgs'
 results_path = 'E:\\hus-scanner\\test_images\\contour_results'
+binary_results_path = 'E:\\hus-scanner\\test_images\\binaries'
 
 
 def contour_process(filename):
@@ -30,8 +30,10 @@ def contour_process(filename):
 
     img = pipeline.execute(img)
 
+    cv.imwrite(os.path.join(binary_results_path, filename.split("_")[0] + '_bin.png'), img)
+
     contours, hierarchy = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    min_contour_area = 1000  # Ngưỡng diện tích, có thể điều chỉnh tùy theo ảnh của bạn
+    min_contour_area = 500  # Ngưỡng diện tích, có thể điều chỉnh tùy theo ảnh của bạn
     large_contours = [cnt for cnt in contours if cv.contourArea(cnt) > min_contour_area]
     large_contours = sorted(large_contours, key=cv.contourArea, reverse=True)
     large_contours.pop(0)
@@ -59,5 +61,5 @@ files = [f for f in files if os.path.isfile(os.path.join(images_path, f))]
 for filename in tqdm(files):
     img = contour_process(filename)
     number = filename.split("_")[0]
-    new_file_name = number + "_contour.jpg"
+    new_file_name = number + "_contour.png"
     cv.imwrite(os.path.join(results_path, new_file_name), img)

@@ -40,12 +40,12 @@ def batch_convert_to_png(input_folder, output_folder):
 
     os.makedirs(output_folder, exist_ok=True)
 
-    for filename in os.listdir(input_folder):
+    for i, filename in enumerate(os.listdir(input_folder)):
         # If image is in HEIC format
         if filename.lower().endswith(".heic"):
             print(filename)
             input_path = os.path.join(input_folder, filename)
-            output_path = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.png")
+            output_path = os.path.join(output_folder, f"{i}_raw.png")
 
             try:
                 image = Image.open(input_path)
