@@ -34,7 +34,7 @@ def detect_corner(img: np.ndarray):
         print(approx)
 
 
-def convert_to_png(input_folder, output_folder):
+def batch_convert_to_png(input_folder, output_folder):
     # Register HEIC
     pillow_heif.register_heif_opener()
 
@@ -42,7 +42,8 @@ def convert_to_png(input_folder, output_folder):
 
     for filename in os.listdir(input_folder):
         # If image is in HEIC format
-        if filename.lower().endswith(".HEIC"):
+        if filename.lower().endswith(".heic"):
+            print(filename)
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.png")
 
