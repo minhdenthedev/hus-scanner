@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from src.binarizer.binarizer import Binarizer
 from src.binarizer.remove_shadow import RemoveShadow
 from src.pipeline import Pipeline
-from src.utils import detect_corner
+from src.utils import detect_contour
 import os
 from tqdm import tqdm
 
-images_path = 'E:\\hus-scanner\\test_images\\raw_png_imgs'
+images_path = 'E:\\hus-scanner\\test_images\\unfiltered_pngs'
 results_path = 'E:\\hus-scanner\\test_images\\contour_results'
 binary_results_path = 'E:\\hus-scanner\\test_images\\binaries'
 
@@ -32,24 +32,7 @@ def contour_process(filename):
 
     cv.imwrite(os.path.join(binary_results_path, filename.split("_")[0] + '_bin.png'), img)
 
-    contours, hierarchy = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    min_contour_area = 500  # Ngưỡng diện tích, có thể điều chỉnh tùy theo ảnh của bạn
-    large_contours = [cnt for cnt in contours if cv.contourArea(cnt) > min_contour_area]
-    large_contours = sorted(large_contours, key=cv.contourArea, reverse=True)
-    large_contours.pop(0)
-    contoured_image = image.copy()
-
-    for contour in large_contours:
-        # Tính chu vi của contour
-        epsilon = 0.02 * cv.arcLength(contour, True)  # epsilon là 2% chu vi của contour
-        approx = cv.approxPolyDP(contour, epsilon, True)  # Xấp xỉ contour thành đa giác
-
-        # Vẽ contour gốc
-        cv.drawContours(contoured_image, [contour], -1, (0, 255, 0), 30)
-        cv.drawContours(contoured_image, [approx], -1, (0, 0, 255), 30)
-
-    # contoured_image = image.copy()
-    # cv.drawContours(contoured_image, large_contours, -1, (0, 255, 0), 30)
+    contoured_image = detect_contour(img)
 
     return contoured_image
 

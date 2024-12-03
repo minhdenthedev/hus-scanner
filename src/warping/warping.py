@@ -1,29 +1,29 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
 from src.base_step import BaseStep
 
 
 class Warping(BaseStep):
-    def __init__(self):
+    def __init__(self, approx: np.ndarray):
         super().__init__()
+        self.approx = approx
 
-    def execute_step(self, img: np.ndarray, approx: np.ndarray):
-        if img is None or approx is None:
+    def execute_step(self, img: np.ndarray):
+        if img is None or self.approx is None:
             # Handle the case where img or approx is None
             print("Error: img or approx is None.")
-            return img, approx
+            return img, self.approx
         
         # Call crop_out to process the image and obtain the cropped image
-        cropped_img = self.crop_out(img, approx)
+        cropped_img = self.crop_out(img)
         # Return both cropped image and vertices
-        return cropped_img, approx
+        return cropped_img, self.approx
     
-    def reorder(self, approx):
+    def reorder(self):
         vertices = []
-        for i in approx:
-            vertices.append((list)(i[0]))
+        for i in self.approx:
+            vertices.append(list(i[0]))
         # Convert to NumPy array (if not already)
         vertices = np.array(vertices, dtype=np.float32)
         
@@ -39,9 +39,9 @@ class Warping(BaseStep):
 
         return reordered
 
-    def crop_out(self, im, approx):
+    def crop_out(self, im):
         # Get the reordered vertices
-        vertices = self.reorder(approx)
+        vertices = self.reorder()
         (a, b, c, d) = vertices
 
         # Calculate width and height of the warped rectangle

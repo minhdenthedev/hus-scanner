@@ -9,16 +9,16 @@ from pathlib import Path
 
 from src.binarizer.binarizer import Binarizer
 from src.binarizer.remove_shadow import RemoveShadow
-from src.corner_detector.corner_detector import CornerDetector
+from src.corner_detector.corner_pipeline import CornerPipeline
 from src.warping.warping import Warping
 from src.pipeline import Pipeline
-from src.utils import detect_corner
+from src.utils import detect_contour
 
 # Create a pipeline
 pipeline = Pipeline(stages=[
     RemoveShadow(),
     Binarizer(),
-    CornerDetector(),
+    CornerPipeline(),
     Warping()
 ])
 

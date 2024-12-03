@@ -6,32 +6,39 @@ from PIL import Image
 import pillow_heif
 
 
-def detect_corner(img: np.ndarray):
-    # # Bước 2: Chuyển sang grayscale
-    # gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+def detect_contour(image: np.ndarray):
+    contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    large_contours = sorted(contours, key=cv.contourArea, reverse=True)
+    large_contours.pop(0)
 
-    # Bước 3: Áp dụng Canny edge detection
-    edges = cv.Canny(img, threshold1=50, threshold2=150)
+    polys = []
 
-    # Bước 4: Giãn các cạnh
-    kernel = np.ones((5, 5), np.uint8)
-    dilated = cv.dilate(edges, kernel, iterations=1)
+    for contour in large_contours[0:4]:
+        epsilon = 0.02 * cv.arcLength(contour, True)  # epsilon là 2% chu vi của contour
+        approx = cv.approxPolyDP(contour, epsilon, True)  # Xấp xỉ contour thành đa giác
+        polys.append(approx)
 
-    # Bước 5: Tìm các contour và lọc theo kích thước
-    contours, _ = cv.findContours(dilated, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours = [cnt for cnt in contours if cv.contourArea(cnt) > 1000]  # Giữ lại các contour lớn
+    return polys
 
-    # Bước 6: Tìm contour lớn nhất (giả định là tờ giấy A4)
-    largest_contour = max(contours, key=cv.contourArea)
 
-    # Bước 7: Xấp xỉ contour để lấy đa giác có 4 cạnh
-    epsilon = 0.02 * cv.arcLength(largest_contour, True)
-    approx = cv.approxPolyDP(largest_contour, epsilon, True)
+# Function to convert (rho, theta) to line equation coefficients (a, b, c)
+def polar_to_cartesian(rho, theta):
+    a = np.cos(theta)
+    b = np.sin(theta)
+    c = -rho
+    return a, b, c
 
-    if len(approx) == 4:
-        return approx
-    else:
-        print(approx)
+
+# Function to find intersection of two lines (a1x + b1y + c1 = 0 and a2x + b2y + c2 = 0)
+def find_intersection(line1, line2):
+    a1, b1, c1 = line1
+    a2, b2, c2 = line2
+    determinant = a1 * b2 - a2 * b1
+    if determinant == 0:  # Lines are parallel
+        return None
+    x = (b1 * c2 - b2 * c1) / determinant
+    y = (a2 * c1 - a1 * c2) / determinant
+    return (int(x), int(y))
 
 
 def batch_convert_to_png(input_folder, output_folder):
