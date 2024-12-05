@@ -9,17 +9,25 @@ from src.corner_detector.corner_pipeline import CornerPipeline
 import os
 
 images_path = 'E:\\hus-scanner\\test_images\\raw_png_imgs'
-corner_path = 'E:\\hus-scanner\\test_images\\corner_detection_v1'
+corner_path = 'E:\\hus-scanner\\test_images\\corner_detection_v2'
 
 list_images = os.listdir(images_path)
 
-for filename in list_images:
-    image = cv.imread(os.path.join(images_path, filename))
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+if __name__ == '__main__':
+    for filename in list_images:
+        image = cv.imread(os.path.join(images_path, filename))
+        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
-    corners = CornerPipeline(version="v1").execute(gray)
+        pipeline = Pipeline(stages=[
+            RemoveShadow(),
+            Binarizer()
+        ])
 
-    for point in corners:
-        cv.circle(image, point, 10, (0, 255, 0), 10)
+        binary = pipeline.execute(gray)
 
-    cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_corner.png"), image)
+        corners = CornerPipeline(version="v2").execute(gray)
+
+        for point in corners:
+            cv.circle(binary, point, 10, (0, 255, 0), 10)
+
+        cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_corner.png"), binary)

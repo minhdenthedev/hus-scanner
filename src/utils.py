@@ -30,6 +30,26 @@ def polar_to_cartesian(rho, theta):
     return a, b, c
 
 
+def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad(8)):
+    filtered_lines = []
+
+    for i, (rho1, theta1) in enumerate(lines):
+        is_parallel = False
+        for rho2, theta2 in filtered_lines:
+            # Calculate the absolute angle difference, normalized to [0, π]
+            angle_diff = abs(theta1 - theta2)
+            angle_diff = min(angle_diff, np.pi - angle_diff)  # Handle wraparound
+            distance = abs(rho2 - rho1)
+            if angle_diff < angle_threshold and distance < min_distance:
+                is_parallel = True
+                break
+
+        if not is_parallel:
+            filtered_lines.append((float(rho1), float(theta1)))
+
+    return filtered_lines
+
+
 # Function to find intersection of two lines (a1x + b1y + c1 = 0 and a2x + b2y + c2 = 0)
 def find_intersection(line1, line2):
     a1, b1, c1 = line1
@@ -39,7 +59,7 @@ def find_intersection(line1, line2):
         return None
     x = (b1 * c2 - b2 * c1) / determinant
     y = (a2 * c1 - a1 * c2) / determinant
-    return (int(x), int(y))
+    return int(x), int(y)
 
 
 def batch_convert_to_png(input_folder, output_folder):
