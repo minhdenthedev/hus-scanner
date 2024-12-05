@@ -30,7 +30,7 @@ def polar_to_cartesian(rho, theta):
     return a, b, c
 
 
-def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad(8)):
+def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad(5)):
     filtered_lines = []
 
     for i, (rho1, theta1) in enumerate(lines):

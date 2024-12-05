@@ -28,6 +28,11 @@ if __name__ == '__main__':
         corners = CornerPipeline(version="v2").execute(gray)
 
         for point in corners:
-            cv.circle(binary, point, 10, (0, 255, 0), 10)
+            cv.circle(binary, point, 20, (0, 255, 0), 20)
+
+        print(corners)
+        if len(corners) == 4:
+            print(corners)
+            # approx = np.array([*corners])
 
         cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_corner.png"), binary)

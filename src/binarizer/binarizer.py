@@ -16,7 +16,7 @@ class Binarizer(BaseStep):
         # Normalize to create contrast
         cv.normalize(thr_img, thr_img, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8UC1)
 
-        # Apply binary thresholding to create a black-and-white image
+        # # Apply binary thresholding to create a black-and-white image
         _, binary_img = cv.threshold(thr_img, 240, 255, cv.THRESH_BINARY)
 
         # Ensure the output is normalized (optional for binary images, as values are 0 or 255)

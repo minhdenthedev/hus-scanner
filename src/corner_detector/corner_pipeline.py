@@ -49,8 +49,12 @@ def corner_detection_v1(img: np.ndarray):
 
 def corner_detection_v2(img: np.ndarray):
     gray_for_contour = img.copy()
+
+    # Xoa het chu
     kernel = np.ones((7, 7), np.uint8)
     gray_for_contour = cv.morphologyEx(gray_for_contour, cv.MORPH_CLOSE, kernel, iterations=3)
+
+    # Chuyen ve nhi phan
     pipeline = Pipeline(stages=[
         RemoveShadow(),
         Binarizer()
@@ -67,11 +71,9 @@ def corner_detection_v2(img: np.ndarray):
         cv.drawContours(contoured_image, [poly], -1, (255, 255, 255), 5)
     edges = cv.erode(contoured_image, np.ones((5, 5)))
     edges = cv.Canny(edges, 150, 250)
-    plt.show()
     lines = cv.HoughLines(edges, 1, np.pi / 180, 260)
 
     lines = remove_nearly_parallel_lines([line[0] for line in lines], 500)
-    print(len(lines))
 
     line_equations = []
 
