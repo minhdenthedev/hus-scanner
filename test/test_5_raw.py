@@ -7,14 +7,15 @@ from src.binarizer.remove_shadow import RemoveShadow
 from src.pipeline import Pipeline
 from src.corner_detector.corner_pipeline import CornerPipeline
 import os
+from tqdm import tqdm
 
-images_path = 'E:\\hus-scanner\\test_images\\raw_png_imgs'
+images_path = 'E:\\hus-scanner\\test_images\\unfiltered_pngs'
 corner_path = 'E:\\hus-scanner\\test_images\\corner_detection_v2'
 
 list_images = os.listdir(images_path)
 
 if __name__ == '__main__':
-    for filename in list_images:
+    for filename in tqdm(list_images):
         image = cv.imread(os.path.join(images_path, filename))
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
@@ -28,11 +29,6 @@ if __name__ == '__main__':
         corners = CornerPipeline(version="v2").execute(gray)
 
         for point in corners:
-            cv.circle(binary, point, 20, (0, 255, 0), 20)
-
-        print(corners)
-        if len(corners) == 4:
-            print(corners)
-            # approx = np.array([*corners])
+            cv.circle(image, point, 20, (0, 255, 0), 20)
 
         cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_corner.png"), binary)
