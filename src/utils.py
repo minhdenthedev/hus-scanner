@@ -8,12 +8,13 @@ import pillow_heif
 
 def detect_contour(image: np.ndarray):
     contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    large_contours = sorted(contours, key=cv.contourArea, reverse=True)
-    large_contours.pop(0)
+    min_contour_area = 1000
+    large_contours = [contour for contour in contours if cv.contourArea(contour) > min_contour_area]
+    large_contours = sorted(large_contours, key=cv.contourArea, reverse=True)
 
     polys = []
 
-    for contour in large_contours[0:4]:
+    for contour in large_contours:
         epsilon = 0.02 * cv.arcLength(contour, True)  # epsilon là 2% chu vi của contour
         approx = cv.approxPolyDP(contour, epsilon, True)  # Xấp xỉ contour thành đa giác
         polys.append(approx)

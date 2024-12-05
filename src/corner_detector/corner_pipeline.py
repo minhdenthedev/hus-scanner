@@ -17,12 +17,11 @@ def corner_detection_v1(img: np.ndarray):
         Binarizer()
     ])
     gray_for_contour = pipeline.execute(gray_for_contour)
-
     polys = detect_contour(gray_for_contour)
 
     contoured_image = gray_for_contour.copy()
     contoured_image[:] = 0
-
+    polys.pop(0)
     for poly in polys:
         cv.drawContours(contoured_image, [poly], -1, (255, 255, 255), 5)
     contoured_image = cv.dilate(contoured_image, np.ones((25, 25)))
@@ -52,20 +51,37 @@ def corner_detection_v2(img: np.ndarray):
     gray_for_contour = img.copy()
     kernel = np.ones((7, 7), np.uint8)
     gray_for_contour = cv.morphologyEx(gray_for_contour, cv.MORPH_CLOSE, kernel, iterations=3)
-    pipeline = Pipeline(stages=[
-        RemoveShadow(),
-        Binarizer()
-    ])
-    gray_for_contour = pipeline.execute(gray_for_contour)
-    plt.imshow(gray_for_contour, cmap="gray")
-    # Detect corners using goodFeaturesToTrack
-    max_corners = 4  # Maximum number of corners to detect
-    quality_level = 0.7  # Minimum accepted quality of corners
-    min_distance = 200  # Minimum distance between corners
+    threshold_value = 140
 
-    corners = cv.goodFeaturesToTrack(gray_for_contour, max_corners, quality_level, min_distance)
-    corners = [(int(corner[0][0]), int(corner[0][1])) for corner in corners]
-    return corners
+    # Apply binary thresholding
+    _, binary_image = cv.threshold(gray_for_contour, threshold_value, 255, cv.THRESH_BINARY)
+
+    edges = cv.Canny(binary_image, 50, 200)
+    edges = cv.dilate(edges, np.ones((7, 7)))
+    edges = cv.medianBlur(edges, ksize=7)
+    polys = detect_contour(edges)
+    contoured_image = gray_for_contour.copy()
+    contoured_image[:] = 0
+    for poly in polys:
+        cv.drawContours(contoured_image, [poly], -1, (255, 255, 255), 5)
+    edges = cv.erode(contoured_image, np.ones((5, 5)))
+    edges = cv.Canny(edges, 150, 250)
+    lines = cv.HoughLines(edges, 1, np.pi / 180, 260)
+
+    line_equations = []
+
+    for line in lines:
+        rho, theta = line[0]
+        line_equations.append(polar_to_cartesian(rho, theta))
+
+    intersections = []
+    for i in range(len(line_equations)):
+        for j in range(i + 1, len(line_equations)):
+            intersection = find_intersection(line_equations[i], line_equations[j])
+            if intersection:
+                intersections.append(intersection)
+
+    return intersections
 
 
 class CornerPipeline(Pipeline):
@@ -78,5 +94,3 @@ class CornerPipeline(Pipeline):
             return corner_detection_v1(img)
         elif self.version == "v2":
             return corner_detection_v2(img)
-
-
