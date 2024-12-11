@@ -9,8 +9,8 @@ from src.corner_detector.corner_pipeline import CornerPipeline
 import os
 from tqdm import tqdm
 
-images_path = 'E:\\hus-scanner\\test_images\\unfiltered_pngs'
-corner_path = 'E:\\hus-scanner\\test_images\\corner_detection_v2'
+images_path = 'E:\\hus-scanner\\test_images\\test_jpgs'
+corner_path = 'E:\\hus-scanner\\test_images\\jpg_scans'
 
 list_images = os.listdir(images_path)
 
@@ -27,8 +27,5 @@ if __name__ == '__main__':
         binary = pipeline.execute(gray)
 
         corners = CornerPipeline(version="v2").execute(gray)
-
-        for point in corners:
-            cv.circle(image, point, 20, (0, 255, 0), 20)
 
         cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_corner.png"), binary)
