@@ -16,12 +16,10 @@ class Binarizer(BaseStep):
         # Normalize to create contrast
         cv.normalize(thr_img, thr_img, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8UC1)
 
-        # # Apply binary thresholding to create a black-and-white image
-        _, binary_img = cv.threshold(thr_img, 240, 255, cv.THRESH_BINARY)
+        # _, binary_img = cv.threshold(thr_img, 240, 255, cv.THRESH_BINARY)
 
-        # Ensure the output is normalized (optional for binary images, as values are 0 or 255)
-        output_img = binary_img.copy()
-        cv.normalize(binary_img, output_img, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8UC1)
+        # output_img = binary_img.copy()
+        # cv.normalize(binary_img, output_img, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8UC1)
 
         # # Lưu ảnh vào thư mục output
         # if not os.path.exists(self.output_folder):
@@ -30,5 +28,5 @@ class Binarizer(BaseStep):
         # cv.imwrite(output_path, output_img)
         # print(f"Image saved to {output_path}")  # Thông báo vị trí lưu ảnh
 
-        return output_img
+        return thr_img
 
