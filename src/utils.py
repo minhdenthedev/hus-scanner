@@ -118,6 +118,42 @@ def find_top_2_largest_distances(points,width,height):
     distances.sort(key=lambda x: x[1], reverse=True)
     return distances[:2]
 
+def fill_image_verticles(center_point, points):
+    height, width = center_point
+    quadrants = {
+            'top_left': [],
+            'top_right': [],
+            'bottom_left': [],
+            'bottom_right': []
+    }
+    
+    for point in points:
+        x, y = point
+        if x < width and y < height:
+            quadrants['top_left']=(point)
+        elif x >= width and y < height:
+            quadrants['top_right']=(point)
+        elif x < width and y >= height:
+            quadrants['bottom_left']=(point)
+        else:
+            quadrants['bottom_right']=(point)
+
+    corners = {
+        'top_left': (0, 0),
+        'top_right': (width*2, 0),
+        'bottom_left': (0, height*2),
+        'bottom_right': (width*2, height*2)
+    }
+    
+    result = {}
+    for quadrant, pts in quadrants.items():
+        if pts:
+            result[quadrant] = pts
+        else:
+            result[quadrant] = corners[quadrant]
+    
+    return result
+
 # points = [(0, 0), (5, 5), (0, 5), (5, 0), (2, 3)]
 # top_2_distances = find_top_2_largest_distances(points)
 # for (point1, point2), distance in top_2_distances:
