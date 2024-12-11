@@ -18,7 +18,7 @@ class Warping(BaseStep):
         # Call crop_out to process the image and obtain the cropped image
         cropped_img = self.crop_out(img)
         # Return both cropped image and vertices
-        return cropped_img, self.approx
+        return cropped_img
     
     def reorder(self):
         vertices = []

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from PIL import Image
 import pillow_heif
-
+import math
 
 def detect_contour(image: np.ndarray):
     contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -82,3 +82,43 @@ def batch_convert_to_png(input_folder, output_folder):
                 print(f"Converted {filename} to {output_path}")
             except Exception as e:
                 print(f"Failed to convert {filename}: {e}")
+
+def calculate_distance(point1, point2):
+    """Tính khoảng cách giữa hai điểm."""
+    x1, y1 = point1
+    x2, y2 = point2
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+def remove_out_of_bounds_points(points, width, height):
+    """
+    Loại bỏ các điểm ngoài giới hạn tọa độ.
+
+    Args:
+        points (list of tuple): Danh sách các điểm (x, y).
+        width (int): Ngưỡng tối đa cho tọa độ x (chiều rộng ảnh).
+        height (int): Ngưỡng tối đa cho tọa độ y (chiều cao ảnh).
+
+    Returns:
+        list of tuple: Danh sách các điểm hợp lệ.
+    """
+    return [(x, y) for x, y in points if 0 <= x < width and 0 <= y < height]
+
+def find_top_2_largest_distances(points,width,height):
+    """Tìm 2 đường chéo của tứ giác là 4 đỉnh của văn bản"""
+    points = remove_out_of_bounds_points(points,width,height)
+    if len(points) < 2:
+        return []
+
+    distances = []
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            distance = calculate_distance(points[i], points[j])
+            distances.append(((points[i], points[j]), distance))
+
+    distances.sort(key=lambda x: x[1], reverse=True)
+    return distances[:2]
+
+# points = [(0, 0), (5, 5), (0, 5), (5, 0), (2, 3)]
+# top_2_distances = find_top_2_largest_distances(points)
+# for (point1, point2), distance in top_2_distances:
+#     print(f"Cặp điểm: {point1}, {point2} - Khoảng cách: {distance:.2f}")
