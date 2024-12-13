@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draggable Points with Transparent Shape</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .canvas-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            border: 2px solid #ccc;
+            background-color: white;
+        }
+        .draggable-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 123, 255, 0.6);
+            border-radius: 50%;
+            border: 2px solid rgba(0, 123, 255, 0.8);
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container" id="canvas-container">
+        <canvas id="shapeCanvas" width="600" height="600"></canvas>
+        <div class="draggable-point" id="point1" style="top: 100px; left: 100px;"></div>
+        <div class="draggable-point" id="point2" style="top: 100px; left: 500px;"></div>
+        <div class="draggable-point" id="point3" style="top: 500px; left: 500px;"></div>
+        <div class="draggable-point" id="point4" style="top: 500px; left: 100px;"></div>
+    </div>
+
+    <script>
+        const points = document.querySelectorAll('.draggable-point');
+        const canvas = document.getElementById('shapeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawShape() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+            // Get the positions of the points
+            const positions = Array.from(points).map(point => {
+                const rect = point.getBoundingClientRect();
+                const containerRect = canvas.parentNode.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 - containerRect.left,
+                    y: rect.top + rect.height / 2 - containerRect.top
+                };
+            });
+
+            // Draw the shape
+            ctx.beginPath();
+            ctx.moveTo(positions[0].x, positions[0].y);
+            for (let i = 1; i < positions.length; i++) {
+                ctx.lineTo(positions[i].x, positions[i].y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = 'rgba(0, 123, 255, 0.1)'; // Transparent blue fill
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        points.forEach(point => {
+            point.addEventListener('mousedown', startDrag);
+
+            function startDrag(event) {
+                const onMouseMove = e => {
+                    const containerRect = canvas.parentNode.getBoundingClientRect();
+                    const x = e.clientX - containerRect.left;
+                    const y = e.clientY - containerRect.top;
+
+                    point.style.left = `${x}px`;
+                    point.style.top = `${y}px`;
+                    drawShape();
+                };
+
+                const onMouseUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                };
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
+        });
+
+        // Initial drawing
+        drawShape();
+    </script>
+</body>
+</html>

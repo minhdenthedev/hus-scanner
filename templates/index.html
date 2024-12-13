@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUS Scanner</title>
+    <link rel="icon" href="/static/logo.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .upload-container {
+            transition: all 0.3s ease;
+        }
+
+        .upload-container:hover {
+            transform: scale(1.02);
+        }
+
+        #progressBar {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="/static/logo.png" alt="Logo" width="30" height="30" class="d-inline-block align-text-top">
+                HUS Scanner
+            </a>
+
+            <div class="navbar-nav ms-auto">
+                <a href="https://github.com/minhdenthedev/hus-scanner" target="_blank" class="nav-item nav-link">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container flex-grow-1 py-4">
+        <div class="row">
+            <div class="col-lg-8 offset-lg-2">
+                <div class="card upload-container shadow-sm">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">Document Scanner</h3>
+                        <h5 class="card-subtitle text-body-secondary mb-4">
+                            Completely <span class="text-primary">Free</span> and <span
+                                class="text-primary">Open-source</span>.
+                            No <span class="text-primary">watermark</span> include.
+                        </h5>
+
+                        <input type="file" id="fileInput" multiple accept="image/*" class="d-none">
+
+                        <div id="dropZone" class="border-dashed p-4 mb-3">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <p class="lead">Drag and drop images or <a href="#" id="browseFiles"
+                                    class="text-primary">browse</a></p>
+                            <small class="text-muted">Supported formats: PNG, JPG, JPEG, HEIC (iphone)</small>
+                        </div>
+
+                        <div id="doneIcon" style="display: none;">
+                            <i class="fa fa-check-circle text-success fs-1" aria-hidden="true"></i>
+                        </div>
+
+                        <div class="fw-light" style="display: none;" id="processingIndicator">
+                            We are processing your images...
+                        </div>
+
+                        <div id="fileList" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="fixed-bottom bg-primary text-center text-light py-2" style="font-size: 85%;">
+        <div>This project was developed by <a href="https://github.com/minhdenthedev" target="_blank"
+                class="text-light">Minh H. Nguyen</a>,
+            <a href="https://github.com/hausura" target="_blank" class="text-light">Nam H. Nguyen</a>,
+            and <a href="https://github.com/shuyn93" target="_blank" class="text-light">Phuong T. T. Nguyen</a>
+            under the guidance
+            of PhD. Do T-H, Hanoi University of Science.
+        </div>
+        <div>Licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank"
+                class="text-light">Apache License 2.0</a>.</div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('fileInput');
+            const dropZone = document.getElementById('dropZone');
+            const browseFiles = document.getElementById('browseFiles');
+            const progressBar = document.getElementById('progressBar');
+            const fileList = document.getElementById('fileList');
+
+            // File selection handlers
+            const handleFiles = async (files) => {
+                fileList.innerHTML = ''; // Clear any existing file list
+
+                var indicator = document.getElementById("processingIndicator");
+
+                indicator.style.display = "block";
+
+                const formData = new FormData();
+                Array.from(files).forEach(file => formData.append('files', file));
+
+                try {
+                    // Start the upload
+                    const response = await fetch('/upload-files/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+
+                    // Parse the response
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Redirect after processing
+                        document.getElementById("doneIcon").style.display = "block";
+                        indicator.textContent = "Done!"
+                        const redirectUrl = `/workspace/${data.session_id}`;
+                        setTimeout(() => {
+                            window.location.href = redirectUrl;
+                        }, 1000);
+                    } else {
+                        throw new Error(data.error || 'Upload failed');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+
+                    // Show error state in progress bar
+                    progressBar.querySelector('.progress-bar').classList.add('bg-danger');
+                    progressBar.querySelector('.progress-bar').textContent = 'Upload failed';
+                } finally {
+                    // Hide the progress bar after a short delay if not redirecting
+                    if (!response.ok) {
+                        setTimeout(() => {
+                            progressBar.style.display = 'none';
+                        }, 3000);
+                    }
+                }
+            };
+
+
+            // Browse files
+            browseFiles.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+            // Drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropZone.classList.add('border-primary');
+            }
+
+            function unhighlight() {
+                dropZone.classList.remove('border-primary');
+            }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

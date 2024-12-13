@@ -156,8 +156,3 @@ def fill_image_verticles(center_point, points):
             result[quadrant] = corners[quadrant]
 
     return result
-
-# points = [(0, 0), (5, 5), (0, 5), (5, 0), (2, 3)]
-# top_2_distances = find_top_2_largest_distances(points)
-# for (point1, point2), distance in top_2_distances:
-#     print(f"Cặp điểm: {point1}, {point2} - Khoảng cách: {distance:.2f}")

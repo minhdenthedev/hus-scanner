@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from typing import List
@@ -10,29 +10,30 @@ import aiofiles
 import cv2 as cv
 import numpy as np
 import logging
+from zipfile import ZipFile
+import img2pdf
+import datetime
+from PIL import Image
+from PIL.ExifTags import TAGS
 
 from src.binarizer.binarizer import Binarizer
 from src.binarizer.remove_shadow import RemoveShadow
 from src.corner_detector.corner_pipeline import CornerPipeline
+from src.enhancer.enhancer import Enhancer
 from src.pipeline import Pipeline
-from src.utils import find_top_2_largest_distances
 from src.warping.warping import Warping
 
-# Configure logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Configuration
 TEMP_FOLDER = os.path.join('static', 'sessions')
 ALLOWED_IMAGE_TYPES = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff'}
 
-# Ensure temp folder exists
 os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 app = FastAPI()
 
-# Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -42,11 +43,92 @@ def is_valid_image(filename: str) -> bool:
     return os.path.splitext(filename)[1].lower() in ALLOWED_IMAGE_TYPES
 
 
+@app.get("/download/zip/{session_id}")
+async def download_zip(session_id: str):
+    folder_path = os.path.join(TEMP_FOLDER, session_id)
+    zip_file_path = os.path.join('static', "zips", f"{session_id}.zip")
+    if not os.path.exists(folder_path):
+        raise HTTPException(status_code=404, detail="Session folder not found")
+
+    if not os.path.exists(zip_file_path):
+        try:
+            with ZipFile(zip_file_path, "w") as zip_object:
+                for folder, _, filenames in os.walk(folder_path):
+                    for filename in filenames:
+                        file_path = os.path.join(folder, filename)
+                        zip_object.write(file_path, os.path.relpath(file_path, folder_path))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error creating ZIP file: {str(e)}")
+
+    return FileResponse(zip_file_path, media_type='application/zip', filename=f"{session_id}.zip")
+
+
+def get_exif_time(image_path):
+    try:
+        img = Image.open(image_path)
+        exif_data = img._getexif()
+        
+        if exif_data is not None:
+            for tag, value in exif_data.items():
+                if TAGS.get(tag) == 'DateTime':
+                    return value
+    except Exception as e:
+        print(f"Error reading EXIF data for {image_path}: {e}")
+    return None
+
+def sort_images_by_capture_time(folder_path):
+    image_files = [
+        os.path.join(folder_path, f) for f in os.listdir(folder_path)
+        if f.lower().endswith(('jpg', 'jpeg', 'png'))
+    ]
+    
+    image_files_with_time = []
+    
+    for image in image_files:
+        exif_time = get_exif_time(image)
+        if exif_time:
+            try:
+                exif_time_obj = datetime.strptime(exif_time, '%Y:%m:%d %H:%M:%S')
+                image_files_with_time.append((image, exif_time_obj))
+            except ValueError:
+                pass
+    
+    image_files_with_time.sort(key=lambda x: x[1])
+    print(image_files_with_time)
+
+    return [image for image, _ in image_files_with_time]
+
+@app.get("/download/pdf/{session_id}")
+async def download_pdf(session_id: str):
+    folder_path = os.path.join(TEMP_FOLDER, session_id)
+    pdf_file_path = os.path.join('static', 'pdf', f"{session_id}.pdf")
+    
+    if not os.path.exists(folder_path):
+        raise HTTPException(status_code=404, detail="Session folder not found")
+
+    image_files = sort_images_by_capture_time(folder_path)
+    
+    if not image_files:
+        image_files = [
+            os.path.join(folder_path, f) for f in os.listdir(folder_path) 
+            if f.lower().endswith(('jpg', 'jpeg', 'png'))
+        ]
+
+    try:
+        with open(pdf_file_path, "wb") as f:
+            f.write(img2pdf.convert(image_files))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating PDF: {str(e)}")
+
+    # Trả về PDF đã tạo
+    return FileResponse(pdf_file_path, media_type="application/pdf", filename=f"{session_id}.pdf")
+
+
+
 @app.post("/upload-files/")
 async def upload_files(
         files: List[UploadFile] = File(...)
 ):
-    """Handle file uploads and initiate background processing."""
     try:
         # Validate files
         valid_files = [f for f in files if is_valid_image(f.filename)]
@@ -103,29 +185,26 @@ async def process_images(files: List[UploadFile], session_path: str):
                     continue
 
                 gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-                height, width = gray.shape
 
-                # Corner detection
+                # Find corners
                 corners = CornerPipeline(version="v2").execute(gray)
-                top_2_distances = find_top_2_largest_distances(corners, width, height)
+                if len(corners) == 4:
+                    # Warping
+                    approx = np.array(corners, dtype=np.float32).reshape((-1, 1, 2))
+                    warped_image = Warping(approx).execute_step(image)
+                    warped_image = cv.cvtColor(warped_image, cv.COLOR_BGR2GRAY)
+                    result = warped_image
+                else:
+                    result = gray
 
-                vertices = []
-                for (point1, point2), _ in top_2_distances:
-                    vertices.extend([point1, point2])
+                # Result
+                pipeline = Pipeline(stages=[
+                    RemoveShadow(),
+                    Enhancer()
+                ])
 
-                if len(vertices) != 4:
-                    logger.warning(f"Could not detect 4 corners in {file.filename}")
-                    continue
-
-                # Image processing pipeline
-                approx = np.array(vertices, dtype=np.float32).reshape((-1, 1, 2))
-                warping_only = Pipeline(stages=[Warping(approx)])
-                warped_image = warping_only.execute(image)
-
-                warped_gray = cv.cvtColor(warped_image, cv.COLOR_BGR2GRAY)
-                pipeline = Pipeline(stages=[RemoveShadow(), Binarizer()])
-                binary = pipeline.execute(warped_gray)
-                cv.imwrite(file_path, binary)
+                result = pipeline.execute(result)
+                cv.imwrite(file_path, result)
             
             except Exception as file_error:
                 logger.error(f"Error processing {file.filename}: {file_error}")
@@ -153,7 +232,7 @@ async def workspace(request: Request, session_id: str):
         'session_id': session_id,
         'files': files
     }
-    return templates.TemplateResponse(request=request, name="workspace.html")
+    return templates.TemplateResponse(request=request, name="workspace.html", context=context)
 
 
 @app.get("/uploaded-images/{session_id}")
