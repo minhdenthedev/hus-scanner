@@ -37,6 +37,19 @@ class Warping(BaseStep):
         reordered[1] = vertices[np.argmin(diff)]  # Top-right
         reordered[3] = vertices[np.argmax(diff)]  # Bottom-left
 
+        # Shrinking in a little bit
+        width = reordered[1][0] - reordered[0][0]
+        height = reordered[3][1] - reordered[0][1]
+        extend = 0.02
+        reordered[0][0] += extend * width
+        reordered[0][1] += extend * height
+        reordered[1][0] -= extend * width
+        reordered[1][1] += extend * height
+        reordered[2][0] -= extend * width
+        reordered[2][1] -= extend * height
+        reordered[3][0] += extend * width
+        reordered[3][1] -= extend * height
+
         return reordered
 
     def crop_out(self, im):

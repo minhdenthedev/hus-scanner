@@ -25,13 +25,13 @@ def detect_contour(image: np.ndarray):
 
 # Function to convert (rho, theta) to line equation coefficients (a, b, c)
 def polar_to_cartesian(rho, theta):
-    a = np.cos(theta)
-    b = np.sin(theta)
-    c = -rho
+    a = rho * np.cos(theta)
+    b = rho * np.sin(theta)
+    c = - (rho * rho)
     return a, b, c
 
 
-def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad(5)):
+def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad(15)):
     filtered_lines = []
 
     for i, (rho1, theta1) in enumerate(lines):
@@ -41,6 +41,30 @@ def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad
             angle_diff = abs(theta1 - theta2)
             angle_diff = min(angle_diff, np.pi - angle_diff)  # Handle wraparound
             distance = abs(rho2 - rho1)
+            if angle_diff < angle_threshold and distance < min_distance:
+                is_parallel = True
+                break
+
+        if not is_parallel:
+            filtered_lines.append((float(rho1), float(theta1)))
+
+    return filtered_lines
+
+
+def remove_parallel_v2(lines, min_distance, angle_threshold=np.deg2rad(15)):
+    filtered_lines = []
+    for i, (rho1, theta1) in enumerate(lines):
+        is_parallel = False
+        x1, y1 = rho1 * np.cos(theta1), rho1 * np.sin(theta1)
+
+        for rho2, theta2 in filtered_lines:
+            x2, y2 = rho2 * np.cos(theta2), rho2 * np.sin(theta2)
+
+            # Tính chênh lệch góc và khoảng cách
+            angle_diff = abs(theta1 - theta2)
+            angle_diff = min(angle_diff, np.pi - angle_diff)  # Handle wraparound
+            distance = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
             if angle_diff < angle_threshold and distance < min_distance:
                 is_parallel = True
                 break
@@ -92,40 +116,9 @@ def calculate_distance(point1, point2):
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
-def remove_out_of_bounds_points(points, width, height):
-    """
-    Loại bỏ các điểm ngoài giới hạn tọa độ.
-
-    Args:
-        points (list of tuple): Danh sách các điểm (x, y).
-        width (int): Ngưỡng tối đa cho tọa độ x (chiều rộng ảnh).
-        height (int): Ngưỡng tối đa cho tọa độ y (chiều cao ảnh).
-
-    Returns:
-        list of tuple: Danh sách các điểm hợp lệ.
-    """
-    return [(x, y) for x, y in points if 0 <= x < width and 0 <= y < height]
-
-
-def find_top_2_largest_distances(points, width, height):
-    """Tìm 2 đường chéo của tứ giác là 4 đỉnh của văn bản"""
-    points = remove_out_of_bounds_points(points, width, height)
-    if len(points) < 2:
-        return []
-
-    distances = []
-    for i in range(len(points)):
-        for j in range(i + 1, len(points)):
-            distance = calculate_distance(points[i], points[j])
-            distances.append(((points[i], points[j]), distance))
-
-    distances.sort(key=lambda x: x[1], reverse=True)
-    top_2_distances = distances[:2]
-    vertices = []
-    for (point1, point2), distance in top_2_distances:
-        vertices.append(point1)
-        vertices.append(point2)
-    return vertices
+def show(img: np.ndarray):
+    plt.imshow(img, cmap="gray")
+    plt.show()
 
 
 def fill_image_verticles(center_point, points):
