@@ -7,6 +7,7 @@ from src.binarizer.remove_shadow import RemoveShadow
 from src.pipeline import Pipeline
 from src.corner_detector.corner_pipeline import CornerPipeline
 from src.warping.warping import Warping
+from src.flatten_image.flatten_image import FlattenImage
 from src.utils import find_top_2_largest_distances, fill_image_verticles
 import os
 from tqdm import tqdm
@@ -14,6 +15,7 @@ from tqdm import tqdm
 images_path = '.\\test_images\\unfiltered_pngs'
 corner_path = '.\\test_images\\corner_detection_v2'
 warped_path = '.\\test_images\\warped'
+flatten_path = '.\\test_images\\flatten'
 
 list_images = os.listdir(images_path)
 
@@ -57,10 +59,16 @@ if __name__ == '__main__':
         approx = np.array(verticles, dtype=np.float32).reshape((-1, 1, 2))
 
 
+        # # Warping work
+        # warping_only = Pipeline(stages=[
+        #     Warping(approx)
+        # ])
+        # warped_image = warping_only.execute(image)
+        
         # Warping work
-        warping_only = Pipeline(stages=[
-            Warping(approx)
+        flatten_only = Pipeline(stages=[
+            FlattenImage(approx)
         ])
-        warped_image = warping_only.execute(image)
+        warped_image = flatten_only.execute(image)
 
-        cv.imwrite(os.path.join(warped_path, filename.split("_")[0] + "_warped.png"), warped_image)
+        cv.imwrite(os.path.join(flatten_path, filename.split("_")[0] + "_flattend.png"), warped_image)

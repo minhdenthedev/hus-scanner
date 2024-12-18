@@ -5,6 +5,9 @@ import os
 from PIL import Image
 import pillow_heif
 import math
+import cv2
+import pytesseract
+
 
 def detect_contour(image: np.ndarray):
     contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -158,3 +161,69 @@ def fill_image_verticles(center_point, points):
 # top_2_distances = find_top_2_largest_distances(points)
 # for (point1, point2), distance in top_2_distances:
 #     print(f"Cặp điểm: {point1}, {point2} - Khoảng cách: {distance:.2f}")
+
+def detect_lines(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY_INV)  # Nhị phân hóa
+    projection = np.sum(binary, axis=1)  # Tổng pixel theo chiều ngang
+    return projection
+
+
+def find_text_regions(projection, threshold=2000):
+    regions = []
+    start = None
+    for i, value in enumerate(projection):
+        if value > threshold and start is None:
+            start = i
+        elif value <= threshold and start is not None:
+            regions.append((start, i))
+            start = None
+    return regions
+
+def detect_lines_and_draw(binary,img, threshold=50):
+    # Tính projection profile (tổng pixel theo chiều ngang)
+    projection = np.sum(binary, axis=1)
+    count=0
+    
+    # Tìm vùng chứa văn bản dựa trên ngưỡng
+    start = None
+    for i, value in enumerate(projection):
+        if value > threshold and start is None:
+            start = i
+        elif value <= threshold and start is not None:
+            # Vẽ một đường ngang tại vị trí dòng phát hiện được
+            cv2.line(img, (0, start), (img.shape[1], start), (0, 255, 0), 1)
+            cv2.line(img, (0, i), (img.shape[1], i), (0, 255, 0), 1)
+            start = None
+            count+=1
+    print("số đường phát hiện được: ",count)
+    return img, projection
+
+
+def get_text_lines(img):
+    d = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    
+    boxes = []
+    for i in range(len(d['level'])):
+        x, y, w, h = d['left'][i], d['top'][i], d['width'][i], d['height'][i]
+        boxes.append((x, y, x + w, y + h))
+    return boxes
+
+def correct_text_lines(img, boxes):
+    h, w = img.shape[:2]
+    src_points = []
+    dst_points = []
+
+    for (x1, y1, x2, y2) in boxes:
+        src_points.append([x1, y1])
+        src_points.append([x2, y2])
+        dst_points.append([x1, y1])  # Giữ nguyên y
+        dst_points.append([x2, y1])  # Làm phẳng theo y
+
+    src_points = np.array(src_points, dtype=np.float32)
+    dst_points = np.array(dst_points, dtype=np.float32)
+
+    M = cv2.estimateAffinePartial2D(src_points, dst_points)[0]
+    corrected_img = cv2.warpAffine(img, M, (w, h))
+    return corrected_img
+
