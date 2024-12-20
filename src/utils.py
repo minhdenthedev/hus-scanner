@@ -7,6 +7,18 @@ import pillow_heif
 import math
 
 
+def show_two(img1: np.ndarray, img2: np.ndarray):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(img1, cmap='gray' if len(img1.shape) == 2 else None)
+    axes[0].axis('off')
+
+    axes[1].imshow(img2, cmap='gray' if len(img2.shape) == 2 else None)
+    axes[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
 def detect_contour(image: np.ndarray):
     contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     min_contour_area = 1000
@@ -51,7 +63,7 @@ def remove_nearly_parallel_lines(lines, min_distance, angle_threshold=np.deg2rad
     return filtered_lines
 
 
-def remove_parallel_v2(lines, min_distance, angle_threshold=np.deg2rad(15)):
+def remove_parallel_v2(lines, min_distance, angle_threshold=np.deg2rad(45)):
     filtered_lines = []
     for i, (rho1, theta1) in enumerate(lines):
         is_parallel = False
@@ -75,6 +87,37 @@ def remove_parallel_v2(lines, min_distance, angle_threshold=np.deg2rad(15)):
     return filtered_lines
 
 
+def is_line_within_image(a, b, c, width, height):
+    intersections = []
+
+    # Cạnh dưới (y = 0)
+    if a != 0:
+        x = -c / a
+        if 0 <= x <= width:
+            intersections.append((x, 0))
+
+    # Cạnh trên (y = height)
+    if a != 0:
+        x = -(b * height + c) / a
+        if 0 <= x <= width:
+            intersections.append((x, height))
+
+    # Cạnh trái (x = 0)
+    if b != 0:
+        y = -c / b
+        if 0 <= y <= height:
+            intersections.append((0, y))
+
+    # Cạnh phải (x = width)
+    if b != 0:
+        y = -(a * width + c) / b
+        if 0 <= y <= height:
+            intersections.append((width, y))
+
+    # Nếu có giao điểm nào nằm trong hình ảnh, đường thẳng nằm trong ảnh
+    return len(intersections) > 0
+
+
 # Function to find intersection of two lines (a1x + b1y + c1 = 0 and a2x + b2y + c2 = 0)
 def find_intersection(line1, line2):
     a1, b1, c1 = line1
@@ -96,7 +139,6 @@ def batch_convert_to_png(input_folder, output_folder):
     for i, filename in enumerate(os.listdir(input_folder)):
         # If image is in HEIC format
         if filename.lower().endswith(".heic"):
-            print(filename)
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, f"{i}_raw.png")
 
@@ -105,6 +147,14 @@ def batch_convert_to_png(input_folder, output_folder):
 
                 image.save(output_path, format="PNG")
                 print(f"Converted {filename} to {output_path}")
+            except Exception as e:
+                print(f"Failed to convert {filename}: {e}")
+        elif filename.lower().endswith('.jpg'):
+            input_path = os.path.join(input_folder, filename)
+            output_path = os.path.join(output_folder, f"{i}_raw.png")
+            try:
+                image = cv.imread(input_path)
+                cv.imwrite(output_path, image)
             except Exception as e:
                 print(f"Failed to convert {filename}: {e}")
 
@@ -156,3 +206,61 @@ def fill_image_verticles(center_point, points):
             result[quadrant] = corners[quadrant]
 
     return result
+
+
+def line_through_two_points(point1, point2):
+    x1, y1 = point1
+    x2, y2 = point2
+
+    a = y2 - y1
+    b = x1 - x2
+    c = x2 * y1 - x1 * y2
+
+    return a, b, c
+
+
+def check_angle_in_range(line1, line2, min_angle=150, max_angle=180):
+    a1, b1, c1 = line1
+    a2, b2, c2 = line2
+
+    # Tính cos của các góc ngưỡng
+    min_cos = np.cos(np.radians(max_angle))  # cos(180°) = -1
+    max_cos = np.cos(np.radians(min_angle))  # cos(150°)
+
+    # Tính tích vô hướng giữa các vector pháp tuyến
+    dot_product = a1 * a2 + b1 * b2
+
+    # Tính độ dài (norm) của các vector pháp tuyến
+    norm1 = np.sqrt(a1 ** 2 + b1 ** 2)
+    norm2 = np.sqrt(a2 ** 2 + b2 ** 2)
+
+    # Tính cos của góc giữa hai đường thẳng
+    cos_theta = dot_product / (norm1 * norm2)
+
+    # Kiểm tra xem góc có nằm trong khoảng [150°, 180°] không
+    if min_cos <= cos_theta <= max_cos:
+        return True
+    else:
+        return False
+
+
+def are_points_collinear(p1, p2, p3):
+    # Tính độ dốc của đoạn thẳng giữa p1 và p2
+    slope1 = (p2[1] - p1[1]) * (p3[0] - p2[0])
+    # Tính độ dốc của đoạn thẳng giữa p2 và p3
+    slope2 = (p3[1] - p2[1]) * (p2[0] - p1[0])
+
+    # Kiểm tra nếu độ dốc của cả hai đoạn thẳng bằng nhau
+    return abs(slope1 - slope2) <= 0.1
+
+
+def filter_collinear_points(points):
+    collinear_triplets = []
+
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            for k in range(j + 1, len(points)):
+                if are_points_collinear(points[i], points[j], points[k]):
+                    collinear_triplets.append((points[i], points[j], points[k]))
+
+    return collinear_triplets
