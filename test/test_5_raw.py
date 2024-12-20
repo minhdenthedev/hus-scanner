@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 from src.binarizer.remove_shadow import RemoveShadow
-from src.corner_detector.corner_pipeline import CornerPipeline
+from src.corner_detector.corner_pipeline import CornerPipeline, sort_points_clockwise, refine_corners
 from src.enhancer.enhancer import Enhancer
 from src.pipeline import Pipeline
 import os
@@ -19,15 +19,17 @@ list_images = os.listdir(images_path)
 if __name__ == '__main__':
     for filename in tqdm(list_images):
         image = cv.imread(os.path.join(images_path, filename))
-        if filename != "29_raw.png":
-            continue
+        print(f"File name: {filename}")
+        # if filename != "7_raw.png":
+        #     continue
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
         # Find corners
         corners = CornerPipeline(version="v2").execute(gray)
-        for corner in corners:
-            cv.circle(image, corner, 20, (0, 255, 0), 20)
-        show(image)
+        # for corner in corners:
+        #     cv.circle(image, corner, 10, (0, 255, 0), 20)
+        # show(image)
+        result = None
 
         if len(corners) == 4:
             # Warping
@@ -36,6 +38,7 @@ if __name__ == '__main__':
             warped_image = cv.cvtColor(warped_image, cv.COLOR_BGR2GRAY)
             result = warped_image
         else:
+            print(f"Error: {filename}")
             result = gray
 
         pipeline = Pipeline(stages=[

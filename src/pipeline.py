@@ -4,7 +4,6 @@ import numpy as np
 from src.base_step import BaseStep
 
 
-
 class Pipeline:
     def __init__(self, stages: List[BaseStep]):
         self.stages = stages

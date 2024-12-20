@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import cv2 as cv
 import numpy as np
 
@@ -5,8 +7,9 @@ from src.binarizer.binarizer import Binarizer
 from src.binarizer.remove_shadow import RemoveShadow
 from src.pipeline import Pipeline
 from src.utils import polar_to_cartesian, find_intersection, detect_contour, remove_nearly_parallel_lines, \
-    remove_parallel_v2, show, calculate_distance, show_two
+    remove_parallel_v2, show, calculate_distance, show_two, line_through_two_points, check_angle_in_range
 import matplotlib.pyplot as plt
+import networkx as nx
 
 
 def remove_out_of_bounds_points(points, width, height):
@@ -21,15 +24,15 @@ def remove_out_of_bounds_points(points, width, height):
     Returns:
         list of tuple: Danh sách các điểm hợp lệ.
     """
+
     result = [(x, y) for x, y in points
-              if (-width * 0.10) <= x < (width * 1.10) and (-0.10 * height) <= y < (1.10 * height)]
+              if (-width * 0.1) <= x < (width * 1.1) and (-0.1 * height) <= y < (1.1 * height)]
     return result
 
 
 def find_top_2_largest_distances(points, width, height):
     """Tìm 2 đường chéo của tứ giác là 4 đỉnh của văn bản"""
     points = remove_out_of_bounds_points(points, width, height)
-    print(points)
     if len(points) < 2:
         return []
 
@@ -40,17 +43,11 @@ def find_top_2_largest_distances(points, width, height):
             distances.append(((points[i], points[j]), distance))
 
     distances.sort(key=lambda x: x[1], reverse=True)
+    top_2_distances = distances[:2]
     vertices = []
-    i = 0
-    for (point1, point2), distance in distances:
-        if point1[0] >= 0 and point1[1] >= 0 and point2[0] >= 0 and point2[1] >= 0:
-            vertices.append(point1)
-            vertices.append(point2)
-            i += 1
-        else:
-            continue
-        if i == 2:
-            break
+    for (point1, point2), distance in top_2_distances:
+        vertices.append(point1)
+        vertices.append(point2)
     return vertices
 
 
@@ -93,6 +90,23 @@ def corner_detection_v1(img: np.ndarray):
     return intersections
 
 
+def sort_points_clockwise(points):
+    points = np.array(points)
+
+    # Tìm trọng tâm (cx, cy)
+    centroid = np.mean(points, axis=0)
+    cx, cy = centroid
+
+    # Tính góc của từng điểm so với trọng tâm
+    angles = np.arctan2(points[:, 1] - cy, points[:, 0] - cx)
+
+    # Sắp xếp các điểm dựa trên góc theo thứ tự giảm dần
+    sorted_indices = np.argsort(-angles)
+    sorted_points = points[sorted_indices]
+
+    return sorted_points.tolist()
+
+
 def corner_detection_v2(img: np.ndarray):
     gray_for_contour = img.copy()
 
@@ -107,7 +121,7 @@ def corner_detection_v2(img: np.ndarray):
     ])
     gray_for_contour = pipeline.execute(gray_for_contour)
     edges = cv.Canny(gray_for_contour, 50, 200)
-    edges = cv.dilate(edges, np.ones((7, 7)))
+    edges = cv.dilate(edges, np.ones((5, 5)))
     polys = detect_contour(edges)
     contoured_image = gray_for_contour.copy()
     contoured_image[:] = 0
@@ -128,7 +142,6 @@ def corner_detection_v2(img: np.ndarray):
         b = np.sin(theta)
         x0 = a * rho
         y0 = b * rho
-        # print((x0, y0))
 
         # Calculate the start and end points of the line
         x1 = int(x0 + 1000 * (-b))  # Extend line in one direction
@@ -138,20 +151,26 @@ def corner_detection_v2(img: np.ndarray):
 
         # Draw the line
         cv.line(copy, (x1, y1), (x2, y2), (255, 255, 255), 2)
-        cv.circle(copy, (x2, y2), 10, (255, 255, 255), 20)
-        # show(copy)
-        # print((x1, y1))
-        # print((x2, y2))
+    lines = cv.HoughLines(copy, 1, np.pi / 180, 260)
 
     line_equations = []
 
-    for line in lines:
-        rho, theta = line
-        line_equations.append(polar_to_cartesian(rho, theta))
+    G = nx.Graph()
 
-    print(img.shape)
-    for line in line_equations:
-        print(line)
+    for i, line in enumerate(lines):
+        rho, theta = line[0]
+        line_equations.append(polar_to_cartesian(rho, theta))
+        G.add_node(i)
+
+    for i in range(len(line_equations)):
+        for j in range(i + 1, len(line_equations)):
+            if check_angle_in_range(line_equations[i], line_equations[j], min_angle=60, max_angle=130):
+                G.add_edge(i, j)
+
+    isolated_nodes = [node for node in G.nodes if G.degree(node) < 2]
+    for index in isolated_nodes:
+        line_equations.pop(index)
+
 
     intersections = []
     for i in range(len(line_equations)):
@@ -160,9 +179,43 @@ def corner_detection_v2(img: np.ndarray):
             if intersection:
                 intersections.append(intersection)
 
-    print(intersections)
-    intersections = find_top_2_largest_distances(intersections, img.shape[1], img.shape[0])
-    print(intersections)
+    intersections = remove_out_of_bounds_points(intersections, img.shape[1], img.shape[0])
+
+    if len(intersections) > 4:
+        intersections = refine_corners(img, intersections)
+
+    return intersections
+
+
+def refine_corners(img: np.ndarray, corners: List[Tuple]):
+    image = img.copy()
+    image[:] = 0
+    corners = sort_points_clockwise(corners)
+    lines = []
+    last_corner = corners[0]
+    for corner in corners[1:]:
+        lines.append(line_through_two_points(last_corner, corner))
+        last_corner = corner
+    lines.append(line_through_two_points(last_corner, corners[0]))
+    line_equations = [lines[0]]
+    last_line = lines[0]
+    for line in lines[1:]:
+        if check_angle_in_range(last_line, line, min_angle=70, max_angle=130):
+            line_equations.append(line)
+            last_line = line
+        else:
+            last_line = line
+            continue
+    if not check_angle_in_range(last_line, lines[0], min_angle=70, max_angle=130):
+        line_equations.pop(0)
+    intersections = []
+    for i in range(len(line_equations)):
+        for j in range(i + 1, len(line_equations)):
+            intersection = find_intersection(line_equations[i], line_equations[j])
+            if intersection:
+                intersections.append(intersection)
+
+    intersections = remove_out_of_bounds_points(intersections, img.shape[1], img.shape[0])
 
     return intersections
 
