@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 
 from src.base_step import BaseStep
+from src.utils import show, show_two
+import cv2 as cv
 
 
 class Warping(BaseStep):
@@ -56,6 +58,7 @@ class Warping(BaseStep):
         # Get the reordered vertices
         vertices = self.reorder()
         (a, b, c, d) = vertices
+        im_c = im.copy()
 
         # Calculate width and height of the warped rectangle
         w1 = np.sqrt(((c[0] - d[0]) ** 2) + ((c[1] - d[1]) ** 2))
@@ -77,5 +80,4 @@ class Warping(BaseStep):
         # Compute perspective transform and apply it
         M = cv2.getPerspectiveTransform(vertices, dst)
         cropped = cv2.warpPerspective(im, M, (max_width, max_height))
-        
         return cropped

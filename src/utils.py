@@ -7,6 +7,17 @@ import pillow_heif
 import math
 
 
+def show_two(img1: np.ndarray, img2: np.ndarray):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(img1, cmap='gray' if len(img1.shape) == 2 else None)
+    axes[0].axis('off')
+
+    axes[1].imshow(img2, cmap='gray' if len(img2.shape) == 2 else None)
+    axes[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
 def detect_contour(image: np.ndarray):
     contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     min_contour_area = 1000
@@ -71,8 +82,41 @@ def remove_parallel_v2(lines, min_distance, angle_threshold=np.deg2rad(15)):
 
         if not is_parallel:
             filtered_lines.append((float(rho1), float(theta1)))
+        # if len(filtered_lines) >= 4:
+        #     return filtered_lines
 
     return filtered_lines
+
+
+def is_line_within_image(a, b, c, width, height):
+    intersections = []
+
+    # Cạnh dưới (y = 0)
+    if a != 0:
+        x = -c / a
+        if 0 <= x <= width:
+            intersections.append((x, 0))
+
+    # Cạnh trên (y = height)
+    if a != 0:
+        x = -(b * height + c) / a
+        if 0 <= x <= width:
+            intersections.append((x, height))
+
+    # Cạnh trái (x = 0)
+    if b != 0:
+        y = -c / b
+        if 0 <= y <= height:
+            intersections.append((0, y))
+
+    # Cạnh phải (x = width)
+    if b != 0:
+        y = -(a * width + c) / b
+        if 0 <= y <= height:
+            intersections.append((width, y))
+
+    # Nếu có giao điểm nào nằm trong hình ảnh, đường thẳng nằm trong ảnh
+    return len(intersections) > 0
 
 
 # Function to find intersection of two lines (a1x + b1y + c1 = 0 and a2x + b2y + c2 = 0)
@@ -96,7 +140,6 @@ def batch_convert_to_png(input_folder, output_folder):
     for i, filename in enumerate(os.listdir(input_folder)):
         # If image is in HEIC format
         if filename.lower().endswith(".heic"):
-            print(filename)
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, f"{i}_raw.png")
 
@@ -105,6 +148,14 @@ def batch_convert_to_png(input_folder, output_folder):
 
                 image.save(output_path, format="PNG")
                 print(f"Converted {filename} to {output_path}")
+            except Exception as e:
+                print(f"Failed to convert {filename}: {e}")
+        elif filename.lower().endswith('.jpg'):
+            input_path = os.path.join(input_folder, filename)
+            output_path = os.path.join(output_folder, f"{i}_raw.png")
+            try:
+                image = cv.imread(input_path)
+                cv.imwrite(output_path, image)
             except Exception as e:
                 print(f"Failed to convert {filename}: {e}")
 
