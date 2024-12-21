@@ -120,8 +120,9 @@ def detect_skewness(image):
     
     angle /= nb_lines
     # I set 15 degrees, on my opinion >15 is not good 
-    if abs(angle * 180.0 / np.pi) > 15:
+    if abs(angle * 180.0 / np.pi) > 10:
         return True, angle * 180.0 / np.pi
+    print( angle * 180.0 / np.pi)
     return False
 
 def calculate_overall_score(img, document_type=None):

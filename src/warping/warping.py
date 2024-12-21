@@ -38,10 +38,18 @@ class Warping(BaseStep):
         reordered[3] = vertices[np.argmax(diff)]  # Bottom-left
 
         return reordered
+    
+    def adjust_vertices(self, vertices):
+        # Calculate the center of the image
+        center = np.mean(vertices, axis=0)
+        # Scale vertices to be closer to the center
+        adjusted_vertices = center + 0.98 * (vertices - center)
+        return adjusted_vertices
 
     def crop_out(self, im):
         # Get the reordered vertices
         vertices = self.reorder()
+        vertices = self.adjust_vertices(vertices)
         (a, b, c, d) = vertices
 
         # Calculate width and height of the warped rectangle
