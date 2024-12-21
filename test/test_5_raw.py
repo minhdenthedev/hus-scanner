@@ -183,26 +183,14 @@ if __name__ == '__main__':
         approx = np.array(verticles, dtype=np.float32).reshape((-1, 1, 2))
 
 
-        # # Warping work
-        # warping_only = Pipeline(stages=[
-        #     Warping(approx)
-        # ])
-        # warped_image = warping_only.execute(image)
-        
-        # Assuming the pipeline and all necessary functions are defined
-        flatten_only = Pipeline(stages=[
-            FlattenImage(approx),  # Assuming 'approx' is already defined
+        # Warping work
+        warping_only = Pipeline(stages=[
+            Warping(approx)
         ])
+        warped_image,approx = warping_only.execute(binary)
 
-        # Apply the flattening process
-        warping_img = flatten_only.execute(binary)
-
-        # Contour detection pipeline
-        contour_only = Pipeline(stages=[
-            FindContours()  # Instantiate the FindContours class
-        ])
         output_filename = filename.split("_")[0] + "_warped.png"
-        cv.imwrite(os.path.join(warped_path, output_filename), warping_img)
+        cv.imwrite(os.path.join(warped_path, output_filename), warped_image)
         print(f"Saved image with wapred: {output_filename}")
 
         # try:
