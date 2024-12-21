@@ -134,7 +134,7 @@ from src.utils import find_top_2_largest_distances, fill_image_verticles
 import os
 from tqdm import tqdm
 
-images_path = '.\\example_input'
+images_path = '.\\test_images\\unfiltered_pngs'
 corner_path = '.\\test_images\\corner_detection_v2'
 warped_path = '.\\test_images\\warped'
 flatten_path = '.\\test_images\\flatten'
