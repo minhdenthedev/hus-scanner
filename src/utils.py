@@ -39,7 +39,7 @@ def detect_contour(image: np.ndarray):
 def polar_to_cartesian(rho, theta):
     a = rho * np.cos(theta)
     b = rho * np.sin(theta)
-    c = - (rho * rho)
+    c = - (a*a + b*b)
     return a, b, c
 
 

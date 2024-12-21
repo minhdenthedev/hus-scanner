@@ -8,6 +8,7 @@ from src.pipeline import Pipeline
 import os
 from tqdm import tqdm
 from src.utils import show_two, show
+import time
 
 from src.warping.warping import Warping
 
@@ -18,8 +19,8 @@ list_images = os.listdir(images_path)
 
 if __name__ == '__main__':
     for filename in tqdm(list_images):
+        start = time.time()
         image = cv.imread(os.path.join(images_path, filename))
-        print(f"File name: {filename}")
         # if filename != "7_raw.png":
         #     continue
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
@@ -46,5 +47,9 @@ if __name__ == '__main__':
             Enhancer()
         ])
         result = pipeline.execute(result)
+        end = time.time()
+
+        print(f"File name: {filename}. Time = {end - start:.2f}")
 
         cv.imwrite(os.path.join(corner_path, filename.split("_")[0] + "_scanned.png"), result)
+

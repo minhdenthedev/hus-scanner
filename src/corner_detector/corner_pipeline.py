@@ -171,7 +171,6 @@ def corner_detection_v2(img: np.ndarray):
     for index in isolated_nodes:
         line_equations.pop(index)
 
-
     intersections = []
     for i in range(len(line_equations)):
         for j in range(i + 1, len(line_equations)):
