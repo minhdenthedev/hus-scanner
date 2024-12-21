@@ -43,7 +43,7 @@ class Warping(BaseStep):
         # Calculate the center of the image
         center = np.mean(vertices, axis=0)
         # Scale vertices to be closer to the center
-        adjusted_vertices = center + 0.75 * (vertices - center)
+        adjusted_vertices = center + 0.98 * (vertices - center)
         return adjusted_vertices
 
     def crop_out(self, im):
