@@ -119,8 +119,8 @@ def detect_skewness(image):
         angle += math.atan2(line[0][3] - line[0][1], line[0][2] - line[0][0])
     
     angle /= nb_lines
-    # I set 15 degrees, on my opinion >15 is not good 
-    if abs(angle * 180.0 / np.pi) > 10:
+    # I set 15 degrees, on my opinion >12 is not good enough 
+    if abs(angle * 180.0 / np.pi) > 12:
         return True, angle * 180.0 / np.pi
     print( angle * 180.0 / np.pi)
     return False
