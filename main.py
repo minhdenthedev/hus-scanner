@@ -67,7 +67,7 @@ def get_exif_time(image_path):
     try:
         img = Image.open(image_path)
         exif_data = img._getexif()
-        
+
         if exif_data is not None:
             for tag, value in exif_data.items():
                 if TAGS.get(tag) == 'DateTime':
@@ -76,14 +76,15 @@ def get_exif_time(image_path):
         print(f"Error reading EXIF data for {image_path}: {e}")
     return None
 
+
 def sort_images_by_capture_time(folder_path):
     image_files = [
         os.path.join(folder_path, f) for f in os.listdir(folder_path)
         if f.lower().endswith(('jpg', 'jpeg', 'png'))
     ]
-    
+
     image_files_with_time = []
-    
+
     for image in image_files:
         exif_time = get_exif_time(image)
         if exif_time:
@@ -92,25 +93,26 @@ def sort_images_by_capture_time(folder_path):
                 image_files_with_time.append((image, exif_time_obj))
             except ValueError:
                 pass
-    
+
     image_files_with_time.sort(key=lambda x: x[1])
     print(image_files_with_time)
 
     return [image for image, _ in image_files_with_time]
 
+
 @app.get("/download/pdf/{session_id}")
 async def download_pdf(session_id: str):
     folder_path = os.path.join(TEMP_FOLDER, session_id)
     pdf_file_path = os.path.join('static', 'pdf', f"{session_id}.pdf")
-    
+
     if not os.path.exists(folder_path):
         raise HTTPException(status_code=404, detail="Session folder not found")
 
     image_files = sort_images_by_capture_time(folder_path)
-    
+
     if not image_files:
         image_files = [
-            os.path.join(folder_path, f) for f in os.listdir(folder_path) 
+            os.path.join(folder_path, f) for f in os.listdir(folder_path)
             if f.lower().endswith(('jpg', 'jpeg', 'png'))
         ]
 
@@ -122,7 +124,6 @@ async def download_pdf(session_id: str):
 
     # Trả về PDF đã tạo
     return FileResponse(pdf_file_path, media_type="application/pdf", filename=f"{session_id}.pdf")
-
 
 
 @app.post("/upload-files/")
@@ -205,12 +206,12 @@ async def process_images(files: List[UploadFile], session_path: str):
 
                 result = pipeline.execute(result)
                 cv.imwrite(file_path, result)
-            
+
             except Exception as file_error:
                 logger.error(f"Error processing {file.filename}: {file_error}")
                 continue
         return True
-        
+
     except Exception as e:
         logger.error("Process failed")
         return False
@@ -245,6 +246,8 @@ async def get_uploaded_images(session_id: str):
     }
     return context
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
