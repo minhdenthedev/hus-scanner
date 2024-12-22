@@ -12,8 +12,8 @@ import time
 
 from src.warping.warping import Warping
 
-images_path = 'E:\\hus-scanner\\test_images\\evaluate_images'
-corner_path = 'E:\\hus-scanner\\test_images\\evaluate_output'
+images_path = '/evaluate_images'
+corner_path = '/evaluate_output'
 
 list_images = os.listdir(images_path)
 
