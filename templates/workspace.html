@@ -59,14 +59,22 @@
         </div>
     </nav>
     <div class="container" id="main-content">
-        <center class="mb-1">
-            <img src="" alt="Image" style="max-width: 100%; max-height: 65vh;" id="currentImage">
-        </center>
+        <div class="hstack mb-1">
+            <div class="d-flex justify-content-center align-items-center" style="height: 60vh; width: 75%;">
+                <img src="" alt="Image" style="max-width: 100%; max-height: 100%;" id="currentImage">
+            </div>
+            <div id="toolbar" class="vstack d-flex justify-content-center align-items-center">
+                <button class="btn btn-lg btn-outline-dark mb-2" onclick="rotateLeft()">
+                    <i class="fa fa-undo" aria-hidden="true"></i>
+                </button>
+                <button class="btn btn-lg btn-outline-dark mb-2" onclick="rotateRight()">
+                    <i class="fa fa-repeat" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
         <div id="image-slider-container" class="">
             <div id="image-slider" class="hstack gap-1 overflow-x-auto">
-                <!--                        {% for file in files %}-->
-                <!--                        <img src="/static/sessions/{{session_id}}/{{file}}" style="max-width: 60%; max-height: 17vh;">-->
-                <!--                        {% endfor %}-->
+
             </div>
         </div>
         <center class="my-2">
